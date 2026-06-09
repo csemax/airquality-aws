@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Peta Kualitas Udara Jawa Timur</title>
+    <meta http-equiv="refresh" content="300">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 560px; width: 100%; border-radius: 16px; }
+        .aqi-marker { width: 42px; height: 42px; border-radius: 50%; color: white; font-weight: bold; font-size: 14px; display:flex; align-items:center; justify-content:center; border:3px solid white; box-shadow:0 3px 10px rgba(0,0,0,.35); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<div class="max-w-7xl mx-auto px-6 py-8">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Peta Monitoring Kualitas Udara Jawa Timur</h1>
+        <p class="text-gray-600 mt-2">Data real-time dari WAQI API, diproses oleh AWS Lambda, disimpan ke DynamoDB, dan ditampilkan pada dashboard EC2.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-xl shadow p-5"><p class="text-gray-500 text-sm">Jumlah Station</p><p class="text-3xl font-bold">{{ summary.total_cities }}</p></div>
+        <div class="bg-white rounded-xl shadow p-5"><p class="text-gray-500 text-sm">AQI Tertinggi</p><p class="text-3xl font-bold">{{ summary.highest_aqi }}</p></div>
+        <div class="bg-white rounded-xl shadow p-5"><p class="text-gray-500 text-sm">Wilayah Terburuk</p><p class="text-xl font-bold">{{ summary.worst_city }}</p></div>
+        <div class="bg-white rounded-xl shadow p-5"><p class="text-gray-500 text-sm">Rata-rata AQI</p><p class="text-3xl font-bold">{{ summary.average_aqi }}</p></div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-5 mb-6"><div id="map"></div></div>
+    {% if cities %}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {% for city in cities %}
+        <div class="bg-white rounded-xl shadow p-6 border-t-8" style="border-color: {{ city.color }}">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">{{ city.display_name }}</h2>
+                    <p class="text-sm text-gray-500">{{ city.station_name }}</p>
+                    <p class="text-xs text-gray-400">Station ID: {{ city.station_id }}</p>
+                </div>
+                <span class="px-3 py-1 rounded-full text-sm font-semibold bg-gray-100">{{ city.category }}</span>
+            </div>
+            <div class="mt-6"><p class="text-gray-500 text-sm">AQI</p><p class="text-6xl font-bold" style="color: {{ city.color }}">{{ city.aqi|round|int }}</p></div>
+            <div class="grid grid-cols-2 gap-4 mt-6 text-sm">
+                <div><p class="text-gray-500">PM2.5</p><p class="font-bold">{{ city.pm25 }}</p></div>
+                <div><p class="text-gray-500">PM10</p><p class="font-bold">{{ city.pm10 }}</p></div>
+                <div><p class="text-gray-500">Suhu</p><p class="font-bold">{{ city.temperature }} °C</p></div>
+                <div><p class="text-gray-500">Kelembaban</p><p class="font-bold">{{ city.humidity }}%</p></div>
+            </div>
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg"><p class="text-sm text-gray-700">{{ city.health_message }}</p></div>
+            <p class="text-xs text-gray-400 mt-4">Last update: {{ city.timestamp }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl shadow p-8 text-center"><p class="text-gray-600">Belum ada data di DynamoDB. Jalankan Lambda air-quality-fetcher terlebih dahulu.</p></div>
+    {% endif %}
+</div>
+<script>
+const cities = {{ cities|tojson }};
+const map = L.map("map").setView([-7.74, 112.43], 8);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"&copy; OpenStreetMap contributors"}).addTo(map);
+function getMarkerColor(city) {
+    if (city.marker_color === "green") return "#16a34a";
+    if (city.marker_color === "gold") return "#facc15";
+    if (city.marker_color === "orange") return "#f97316";
+    if (city.marker_color === "red") return "#dc2626";
+    if (city.marker_color === "purple") return "#9333ea";
+    if (city.marker_color === "maroon") return "#7f1d1d";
+    return "#2563eb";
+}
+cities.forEach(city => {
+    if (!city.lat || !city.lon) return;
+    const markerHtml = `<div class="aqi-marker" style="background:${getMarkerColor(city)}">${Math.round(city.aqi)}</div>`;
+    const icon = L.divIcon({html: markerHtml, className: "", iconSize: [42,42], iconAnchor: [21,21]});
+    const popup = `<div style="min-width:240px"><b style="font-size:16px">${city.display_name}</b><br><span>${city.station_name || "-"}</span><br><small>Station ID: ${city.station_id || "-"}</small><br><br><b>AQI:</b> ${city.aqi}<br><b>Kategori:</b> ${city.category}<br><b>PM2.5:</b> ${city.pm25}<br><b>PM10:</b> ${city.pm10}<br><b>O3:</b> ${city.o3}<br><b>NO2:</b> ${city.no2}<br><b>SO2:</b> ${city.so2}<br><b>CO:</b> ${city.co}<br><b>Suhu:</b> ${city.temperature} °C<br><b>Kelembaban:</b> ${city.humidity}%<br><br><small>${city.health_message}</small></div>`;
+    L.marker([city.lat, city.lon], {icon: icon}).addTo(map).bindPopup(popup);
+});
+</script>
+</body>
+</html>
