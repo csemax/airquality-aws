@@ -11,7 +11,7 @@ Sistem monitoring kualitas udara Jawa Timur berbasis AWS. Data diambil dari WAQI
 Environment variable `CITIES` untuk Lambda fetcher:
 
 ```text
-surabaya:@420154,pasuruan:@519130,malang:@13647,kediri:@519187,mojokerto:@519280,jombang:@516745,probolinggo:@532009,banyuwangi:@519112,madiun:@519016,bojonegoro:@519019
+surabaya:A420154,pasuruan:A519130,malang:malang,kediri:A519187,mojokerto:A519280,jombang:A516745,probolinggo:A532009,banyuwangi:A519112,madiun:A519016,bojonegoro:A519019
 ```
 
 ## Arsitektur
