@@ -15,10 +15,10 @@ table = dynamodb.Table(TABLE_NAME)
 # =========================
 # KONFIGURASI RDS MYSQL
 # =========================
-DB_HOST = "airquality-mysql.cwuofoo15ikw.us-east-1.rds.amazonaws.com"
+DB_HOST = "GANTI ENDPOINT DARI KAMU"
 DB_USER = "admin"
 DB_PASSWORD = "ISI_PASSWORD_RDS_KAMU"
-DB_NAME = "airquality_db"
+DB_NAME = "NAMA DATABSE KAMU"
 DB_PORT = 3306
 
 
